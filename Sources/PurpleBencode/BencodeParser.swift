@@ -24,66 +24,7 @@ extension Bencode.Parser {
     
     mutating func parse() throws -> Bencode {
         
-        try checkIndex()
-        
-        switch data[index] {
-        case ASCII.i.rawValue:
-            
-            index += 1
-            
-            let value = try parseInteger()
-            
-            try parse(.e)
-            
-            return .integer(value)
-            
-        case ASCII._0.rawValue...ASCII._9.rawValue:
-            
-            return try .string(parseStringWithCount())
-            
-        case ASCII.l.rawValue:
-            
-            var result: [Bencode] = []
-            
-            while true {
-                
-                try result.append(parse())
-                
-                try checkIndex()
-                
-                if data[index] == ASCII.e.rawValue {
-                    break
-                }
-                
-            }
-            
-            return .list(result)
-            
-        case ASCII.d.rawValue:
-            
-            var result: [String: Bencode] = [:]
-            
-            while true {
-                
-                let key = try parseStringWithCount()
-                
-                let value = try parse()
-                
-                result[key] = value
-                
-                try checkIndex()
-                
-                if data[index] == ASCII.e.rawValue {
-                    break
-                }
-                
-            }
-            
-            return .dictionary(result)
-            
-        default:
-            throw Error.invalidFormat(index: index)
-        }
+        try parseValue()
         
     }
     
@@ -100,27 +41,94 @@ private extension Bencode.Parser {
         
     }
     
-    mutating func parseStringWithCount() throws -> String {
+    mutating func parseValue() throws -> Bencode {
+        
+        try checkIndex()
+        
+        switch data[index] {
+        case ASCII.i.rawValue:
+            
+            index += 1
+            
+            let value = try parseInteger()
+            
+            try parse(.e)
+            
+            return .integer(value)
+            
+        case ASCII._0.rawValue...ASCII._9.rawValue:
+            
+            return try .data(parseDataWithCount())
+            
+        case ASCII.l.rawValue:
+            
+            index += 1
+            
+            var result: [Bencode] = []
+            
+            while true {
+                
+                try result.append(parseValue())
+                
+                try checkIndex()
+                
+                if data[index] == ASCII.e.rawValue {
+                    index += 1
+                    break
+                }
+                
+            }
+            
+            return .list(result)
+            
+        case ASCII.d.rawValue:
+            
+            index += 1
+            
+            var result: [Data: Bencode] = [:]
+            
+            while true {
+                
+                let key = try parseDataWithCount()
+                
+                let value = try parseValue()
+                
+                result[key] = value
+                
+                try checkIndex()
+                
+                if data[index] == ASCII.e.rawValue {
+                    index += 1
+                    break
+                }
+                
+            }
+            
+            return .dictionary(result)
+            
+        default:
+            throw Error.invalidFormat(index: index)
+        }
+        
+    }
+    
+    mutating func parseDataWithCount() throws -> Data {
         
         let count = try parseNonNegativeInteger()
         
         try parse(.colon)
         
-        return try parseString(forCount: count)
+        return try parseData(forCount: count)
         
     }
     
-    mutating func parseString(forCount count: Int) throws -> String {
+    mutating func parseData(forCount count: Int) throws -> Data {
         
         guard index + count <= data.endIndex else {
             throw Error.invalidFormat(index: index)
         }
         
-        let stringData = data.subdata(in: index ..< index + count)
-        
-        guard let result = String(bytes: stringData, encoding: .utf8) else {
-            throw Error.invalidFormat(index: index)
-        }
+        let result = data.subdata(in: index ..< index + count)
         
         index += count
         

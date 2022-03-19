@@ -3,25 +3,25 @@ import XCTest
 
 final class PurpleBencodeTests: XCTestCase {
     
-    func testEncodingInteger() {
-        XCTAssertEqual(Bencode.integer(123).data(), "i123e".data(using: .utf8)!)
+    func testEncodingInteger() throws {
+        try XCTAssertEqual(Bencode.integer(123).data(), "i123e".data(using: .utf8)!)
     }
     
-    func testEncodingString() {
-        XCTAssertEqual(Bencode.string("Hello").data(), "5:Hello".data(using: .utf8)!)
+    func testEncodingString() throws {
+        try XCTAssertEqual(Bencode.string("Hello")!.data(), "5:Hello".data(using: .utf8)!)
     }
     
-    func testEncodingList() {
-        XCTAssertEqual(Bencode.list(["Hello", 123]).data(), "l5:Helloi123ee".data(using: .utf8)!)
+    func testEncodingList() throws {
+        try XCTAssertEqual(Bencode.list(["Hello", 123]).data(), "l5:Helloi123ee".data(using: .utf8)!)
     }
     
-    func testEncodingDictionary() {
+    func testEncodingDictionary() throws {
         
-        XCTAssertEqual(Bencode.dictionary(["Hello": 123]).data(),
-                       "d5:Helloi123ee".data(using: .utf8)!)
+        try XCTAssertEqual(Bencode.dictionaryFromStringKey(["Hello": 123])!.data(),
+                           "d5:Helloi123ee".data(using: .utf8)!)
         
-        XCTAssertEqual(Bencode.dictionary(["Hello": 123, "World": 456]).data(),
-                       "d5:Helloi123e5:Worldi456ee".data(using: .utf8)!)
+        try XCTAssertEqual(Bencode.dictionaryFromStringKey(["Hello": 123, "World": 456])!.data(),
+                           "d5:Helloi123e5:Worldi456ee".data(using: .utf8)!)
         
     }
     
@@ -30,11 +30,11 @@ final class PurpleBencodeTests: XCTestCase {
         for _ in 0..<20 {
             
             let value: Int = .random(in: .min ... .max)
-        
+            
             try XCTAssertEqual(Bencode(data: "i\(value)e".data(using: .utf8)!), .integer(value))
             
             try XCTAssertNotEqual(Bencode(data: "i\(value)e".data(using: .utf8)!), .integer(-value))
-
+            
         }
         
         XCTAssertThrowsError(try Bencode(data: "i123".data(using: .utf8)!))
@@ -71,7 +71,7 @@ final class PurpleBencodeTests: XCTestCase {
         for string in strings {
             
             try XCTAssertEqual(Bencode(data: "\(string.utf8.count):\(string)".data(using: .utf8)!),
-                .string(string))
+                               .string(string)!)
             
         }
         
